@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+        }
+
+        .chess-board {
+            border: 2px solid #888;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .row {
+            display: flex;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .white {
+            background-color: #f0d9b5;
+        }
+
+        .black {
+            background-color: #b58863;
+        }
+
+        .selected {
+            background-color: #7fb3d5;
+        }
+
+        .possible-move {
+            background-color: #90EE90;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .back-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" id="backButton">Undo Move</button>
+    <div class="chess-board" id="board"></div>
+
+    <script>
+        const board = document.getElementById('board');
+        const backButton = document.getElementById('backButton');
+        let selectedPiece = null;
+        let currentPlayer = 'white';
+        let moveHistory = [];
+
+        const initialBoard = [
+            ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
+            ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'],
+            ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']
+        ];
+
+        function createBoard() {
+            for (let i = 0; i < 8; i++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                
+                for (let j = 0; j < 8; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${(i + j) % 2 === 0 ? 'white' : 'black'}`;
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.textContent = initialBoard[i][j];
+                    cell.addEventListener('click', handleCellClick);
+                    row.appendChild(cell);
+                }
+                
+                board.appendChild(row);
+            }
+        }
+
+        function handleCellClick(e) {
+            const cell = e.target;
+            const piece = cell.textContent;
+            const isWhitePiece = '♔♕♖♗♘♙'.includes(piece);
+            
+            if (selectedPiece === null) {
+                // First click - selecting a piece
+                if ((currentPlayer === 'white' && isWhitePiece) || 
+                    (currentPlayer === 'black' && !isWhitePiece && piece !== '')) {
+                    selectedPiece = cell;
+                    cell.classList.add('selected');
+                }
+            } else {
+                // Second click - moving to destination
+                const fromRow = parseInt(selectedPiece.dataset.row);
+                const fromCol = parseInt(selectedPiece.dataset.col);
+                const toRow = parseInt(cell.dataset.row);
+                const toCol = parseInt(cell.dataset.col);
+                const movingPiece = selectedPiece.textContent;
+
+                // Prevent moving to empty cell if no piece was selected
+                if (!movingPiece) {
+                    selectedPiece.classList.remove('selected');
+                    selectedPiece = null;
+                    return;
+                }
+
+                if (cell !== selectedPiece) {
+                    // Save the move for undo functionality
+                    moveHistory.push({
+                        fromRow,
+                        fromCol,
+                        toRow,
+                        toCol,
+                        capturedPiece: initialBoard[toRow][toCol],
+                        movedPiece: initialBoard[fromRow][fromCol],
+                        player: currentPlayer
+                    });
+
+                    // Update the board array
+                    initialBoard[toRow][toCol] = initialBoard[fromRow][fromCol];
+                    initialBoard[fromRow][fromCol] = '';
+
+                    // Update the display
+                    cell.textContent = selectedPiece.textContent;
+                    selectedPiece.textContent = '';
+
+                    // Switch players
+                    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                }
+
+                // Clear selection
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+            }
+        }
+
+        backButton.addEventListener('click', () => {
+            if (moveHistory.length > 0) {
+                const lastMove = moveHistory.pop();
+                
+                // Restore the board state
+                initialBoard[lastMove.fromRow][lastMove.fromCol] = lastMove.movedPiece;
+                initialBoard[lastMove.toRow][lastMove.toCol] = lastMove.capturedPiece;
+
+                // Update the display
+                const fromCell = document.querySelector(`[data-row="${lastMove.fromRow}"][data-col="${lastMove.fromCol}"]`);
+                const toCell = document.querySelector(`[data-row="${lastMove.toRow}"][data-col="${lastMove.toCol}"]`);
+                
+                fromCell.textContent = lastMove.movedPiece;
+                toCell.textContent = lastMove.capturedPiece;
+
+                // Switch back to previous player
+                currentPlayer = lastMove.player;
+            }
+        });
+
+        createBoard();
+    </script>
+</body>
+</html>
